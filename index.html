@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Sakurazaka46 Photo Tracker</title>
+    
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        sakura: {
+                            DEFAULT: '#f4aebb', // 櫻坂粉
+                            dark: '#d68a9f',
+                        },
+                        darkgray: '#333333'
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        /* 隱藏 Scrollbar 但保留功能 (Webkit) */
+        .hide-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .hide-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        [v-cloak] { display: none; }
+    </style>
+</head>
+<body class="bg-gray-50 text-darkgray font-sans pb-20">
+
+    <div id="app" v-cloak>
+        <header class="sticky top-0 z-50 bg-white/90 backdrop-blur-md shadow-sm border-b border-pink-100">
+            <div class="px-4 py-3 flex space-x-2 overflow-x-auto hide-scrollbar items-center">
+                <button 
+                    @click="currentFilter = 'Total'"
+                    :class="currentFilter === 'Total' ? 'bg-sakura text-white shadow-md' : 'bg-gray-100 text-gray-500'"
+                    class="whitespace-nowrap px-4 py-1.5 rounded-full text-sm font-bold transition-all flex-shrink-0">
+                    Total
+                </button>
+                
+                <button 
+                    v-for="member in uniqueMembers" 
+                    :key="member"
+                    @click="currentFilter = member"
+                    :class="currentFilter === member ? 'bg-sakura text-white shadow-md' : 'bg-gray-100 text-gray-500'"
+                    class="whitespace-nowrap px-4 py-1.5 rounded-full text-sm font-medium transition-all flex-shrink-0">
+                    {{ member }}
+                </button>
+            </div>
+        </header>
+
+        <main class="p-4 max-w-md mx-auto">
+            
+            <div v-if="loading" class="text-center py-10 text-sakura">
+                <p class="animate-pulse font-bold">讀取資料中...</p>
+            </div>
+
+            <div class="bg-white rounded-xl shadow-sm p-4 mb-6 border border-gray-100">
+                <h2 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">New Entry</h2>
+                <div class="space-y-3">
+                    <div class="grid grid-cols-2 gap-2">
+                        <div>
+                            <label class="text-xs text-gray-500 block mb-1">成員</label>
+                            <div class="relative">
+                                <select v-model="newItem.member" class="w-full bg-gray-50 border border-gray-200 rounded-lg p-2 text-sm appearance-none focus:outline-none focus:border-sakura">
+                                    <option disabled value="">選擇成員</option>
+                                    <option v-for="m in presetMembers" :value="m">{{ m }}</option>
+                                </select>
+                                <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
+                                    <svg class="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/></svg>
+                                </div>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="text-xs text-gray-500 block mb-1">套組名稱</label>
+                            <input v-model="newItem.set_name" type="text" placeholder="ex: 2025振袖" class="w-full bg-gray-50 border border-gray-200 rounded-lg p-2 text-sm focus:outline-none focus:border-sakura">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="text-xs text-gray-500 block mb-1">構成 (以逗號分隔)</label>
+                        <input v-model="newItem.poses_input" type="text" class="w-full bg-gray-50 border border-gray-200 rounded-lg p-2 text-sm focus:outline-none focus:border-sakura">
+                    </div>
+                    
+                    <button @click="addNewItem" :disabled="submitting" class="w-full bg-darkgray hover:bg-black text-white py-2 rounded-lg text-sm font-bold transition-colors disabled:opacity-50">
+                        {{ submitting ? '處理中...' : '＋ 新增生寫真' }}
+                    </button>
+                </div>
+            </div>
+
+            <div class="space-y-4">
+                <div v-if="filteredItems.length === 0 && !loading" class="text-center text-gray-400 text-sm py-8">
+                    沒有符合的資料
+                </div>
+
+                <div v-for="item in filteredItems" :key="item.id" class="bg-white rounded-xl shadow-sm border border-gray-100 p-4 relative overflow-hidden transition-all duration-300">
+                    
+                    <div class="flex justify-between items-start mb-3">
+                        <div>
+                            <div class="text-xs text-sakura font-bold mb-0.5">{{ item.member }}</div>
+                            <div class="text-lg font-bold text-gray-800 leading-tight">{{ item.set_name }}</div>
+                        </div>
+                        <div v-if="isComp(item.poses_json)" class="bg-yellow-400 text-yellow-900 text-xs font-black px-2 py-1 rounded shadow-sm transform rotate-3 flex items-center">
+                            <span>👑 COMP</span>
+                        </div>
+                    </div>
+
+                    <hr class="border-gray-100 mb-3">
+
+                    <div class="grid grid-cols-4 gap-2">
+                        <button 
+                            v-for="(pose, idx) in item.poses_json" 
+                            :key="idx"
+                            @click="cyclePoseState(item, idx)"
+                            class="flex flex-col items-center justify-center py-2 rounded-lg transition-colors duration-200 border"
+                            :class="getButtonClass(pose.s)">
+                            
+                            <span class="text-xs font-bold">{{ pose.n }}</span> <span class="text-[10px] opacity-80">{{ getStatusLabel(pose.s) }}</span> </button>
+                    </div>
+
+                    <div v-if="item._saving" class="absolute bottom-1 right-2 text-[10px] text-gray-300">
+                        Saving...
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // 填入您部署的 GAS Web App URL
+        const API_URL = 'YOUR_GOOGLE_APPS_SCRIPT_WEB_APP_URL_HERE';
+
+        const { createApp, ref, computed, onMounted } = Vue;
+
+        createApp({
+            setup() {
+                const items = ref([]);
+                const loading = ref(false);
+                const submitting = ref(false);
+                const currentFilter = ref('Total');
+                
+                // 預設成員名單
+                const presetMembers = [
+                   '田村保乃', '森田ひかる', '山﨑天', '藤吉夏鈴', '守屋麗奈', 
+                   '大園玲', '山下瞳月', '谷口愛季', '村井優', '中嶋優月'
+                ];
+
+                // 新增表單資料
+                const newItem = ref({
+                    member: '',
+                    set_name: '',
+                    poses_input: 'ヨリ, チュウ, ヒキ, 座り'
+                });
+
+                // Debounce timer map
+                const debounceTimers = {};
+
+                // 1. Fetch Data
+                const fetchData = async () => {
+                    loading.value = true;
+                    try {
+                        const res = await fetch(API_URL);
+                        const json = await res.json();
+                        if(json.status === 'success'){
+                            items.value = json.data;
+                        }
+                    } catch (e) {
+                        alert('讀取失敗: ' + e);
+                    } finally {
+                        loading.value = false;
+                    }
+                };
+
+                // 2. Computed: Filter Logic
+                const uniqueMembers = computed(() => {
+                    const members = items.value.map(i => i.member);
+                    return [...new Set(members)].sort();
+                });
+
+                const filteredItems = computed(() => {
+                    if (currentFilter.value === 'Total') return items.value;
+                    return items.value.filter(i => i.member === currentFilter.value);
+                });
+
+                // 3. Add Item
+                const addNewItem = async () => {
+                    if(!newItem.value.member || !newItem.value.set_name) return alert('請填寫完整資訊');
+                    
+                    submitting.value = true;
+                    
+                    // 解析姿勢字串為 JSON 結構: [{n: 'ヨリ', s: 0}, ...]
+                    // s (status): 0=None, 1=Owned, 2=Trade, 3=Spare
+                    const posesArray = newItem.value.poses_input.split(/[,，]/).map(p => ({
+                        n: p.trim(),
+                        s: 0 
+                    })).filter(p => p.n);
+
+                    const payload = {
+                        id: Date.now(), // Timestamp ID
+                        member: newItem.value.member,
+                        set_name: newItem.value.set_name,
+                        poses_json: posesArray
+                    };
+
+                    // Optimistic UI Update (先加到畫面)
+                    items.value.unshift(payload);
+
+                    // Call API
+                    try {
+                        await fetch(API_URL, {
+                            method: 'POST',
+                            mode: 'no-cors', // 重要：GAS post 常用 hack
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ action: 'upsert', data: payload })
+                        });
+                        // Reset Form
+                        newItem.value.set_name = '';
+                    } catch(e) {
+                        alert('新增失敗，請重整頁面');
+                    } finally {
+                        submitting.value = false;
+                    }
+                };
+
+                // 4. Interaction: Cycle Status
+                const cyclePoseState = (item, poseIndex) => {
+                    // 狀態循環: 0 -> 1 -> 2 -> 3 -> 0
+                    let currentStatus = item.poses_json[poseIndex].s;
+                    item.poses_json[poseIndex].s = (currentStatus + 1) % 4;
+
+                    // Trigger Debounced Save
+                    saveItemDebounced(item);
+                };
+
+                const saveItemDebounced = (item) => {
+                    item._saving = true; // UI Hint
+                    
+                    // Clear existing timer for this item
+                    if (debounceTimers[item.id]) clearTimeout(debounceTimers[item.id]);
+
+                    // Set new timer (1.5秒後儲存)
+                    debounceTimers[item.id] = setTimeout(async () => {
+                        try {
+                            await fetch(API_URL, {
+                                method: 'POST',
+                                mode: 'no-cors',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ action: 'upsert', data: item })
+                            });
+                        } catch(e) {
+                            console.error('Auto save failed', e);
+                        } finally {
+                            item._saving = false;
+                            delete debounceTimers[item.id];
+                        }
+                    }, 1500);
+                };
+
+                // Helpers
+                const getButtonClass = (status) => {
+                    switch(status) {
+                        case 1: return 'bg-sakura text-white border-sakura shadow-md'; // 收藏中
+                        case 2: return 'bg-yellow-400 text-yellow-900 border-yellow-400'; // 交換中
+                        case 3: return 'bg-blue-400 text-white border-blue-400'; // 複數
+                        default: return 'bg-gray-50 text-gray-400 border-gray-200'; // 無
+                    }
+                };
+
+                const getStatusLabel = (status) => {
+                    switch(status) {
+                        case 1: return 'GET';
+                        case 2: return 'TRADE';
+                        case 3: return 'SPARE';
+                        default: return 'NONE';
+                    }
+                };
+
+                const isComp = (poses) => {
+                    if (!poses || poses.length === 0) return false;
+                    // 檢查是否每一個 pose 的 status 都是 1
+                    return poses.every(p => p.s === 1);
+                };
+
+                onMounted(() => {
+                    fetchData();
+                });
+
+                return {
+                    items, loading, submitting, presetMembers, newItem, currentFilter,
+                    uniqueMembers, filteredItems,
+                    addNewItem, cyclePoseState, getButtonClass, getStatusLabel, isComp
+                };
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>
