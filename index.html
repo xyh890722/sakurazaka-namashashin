@@ -98,7 +98,7 @@
                                     <select v-model="newItem.member" :disabled="!selectedGen"
                                         class="w-full bg-gray-50 border border-gray-200 rounded-lg p-2 text-sm appearance-none focus:outline-none focus:border-sakura disabled:bg-gray-100 disabled:text-gray-400">
                                         <option disabled value="">
-                                            {{ selectedGen ? '選擇成員' : '請先選期別' }}
+                                            {{ selectedGen ? '選擇成員' : '選擇成員' }}
                                         </option>
                                         <option v-for="m in currentMemberOptions" :value="m">{{ m }}</option>
                                     </select>
@@ -401,5 +401,6 @@
         }).mount('#app');
     </script>
 </body>
+
 
 </html>
