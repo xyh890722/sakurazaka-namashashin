@@ -1,13 +1,14 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Sakurazaka46 Photo Tracker</title>
-    
+
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
-    
+
     <script>
         tailwind.config = {
             theme: {
@@ -29,29 +30,30 @@
         .hide-scrollbar::-webkit-scrollbar {
             display: none;
         }
+
         .hide-scrollbar {
             -ms-overflow-style: none;
             scrollbar-width: none;
         }
-        [v-cloak] { display: none; }
+
+        [v-cloak] {
+            display: none;
+        }
     </style>
 </head>
+
 <body class="bg-gray-50 text-darkgray font-sans pb-20">
 
     <div id="app" v-cloak>
         <header class="sticky top-0 z-50 bg-white/90 backdrop-blur-md shadow-sm border-b border-pink-100">
             <div class="px-4 py-3 flex space-x-2 overflow-x-auto hide-scrollbar items-center">
-                <button 
-                    @click="currentFilter = 'Total'"
+                <button @click="currentFilter = 'Total'"
                     :class="currentFilter === 'Total' ? 'bg-sakura text-white shadow-md' : 'bg-gray-100 text-gray-500'"
                     class="whitespace-nowrap px-4 py-1.5 rounded-full text-sm font-bold transition-all flex-shrink-0">
                     Total
                 </button>
-                
-                <button 
-                    v-for="member in uniqueMembers" 
-                    :key="member"
-                    @click="currentFilter = member"
+
+                <button v-for="member in uniqueMembers" :key="member" @click="currentFilter = member"
                     :class="currentFilter === member ? 'bg-sakura text-white shadow-md' : 'bg-gray-100 text-gray-500'"
                     class="whitespace-nowrap px-4 py-1.5 rounded-full text-sm font-medium transition-all flex-shrink-0">
                     {{ member }}
@@ -60,7 +62,7 @@
         </header>
 
         <main class="p-4 max-w-md mx-auto">
-            
+
             <div v-if="loading" class="text-center py-10 text-sakura">
                 <p class="animate-pulse font-bold">讀取資料中...</p>
             </div>
@@ -69,29 +71,62 @@
                 <h2 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">New Entry</h2>
                 <div class="space-y-3">
                     <div class="grid grid-cols-2 gap-2">
-                        <div>
-                            <label class="text-xs text-gray-500 block mb-1">成員</label>
-                            <div class="relative">
-                                <select v-model="newItem.member" class="w-full bg-gray-50 border border-gray-200 rounded-lg p-2 text-sm appearance-none focus:outline-none focus:border-sakura">
-                                    <option disabled value="">選擇成員</option>
-                                    <option v-for="m in presetMembers" :value="m">{{ m }}</option>
-                                </select>
-                                <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
-                                    <svg class="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/></svg>
+                        <div class="grid grid-cols-2 gap-2">
+                            <div>
+                                <label class="text-xs text-gray-500 block mb-1">期別</label>
+                                <div class="relative">
+                                    <select v-model="selectedGen" @change="handleGenChange"
+                                        class="w-full bg-gray-50 border border-gray-200 rounded-lg p-2 text-sm appearance-none focus:outline-none focus:border-sakura">
+                                        <option disabled value="">選擇期別</option>
+                                        <option v-for="(list, gen) in memberData" :key="gen" :value="gen">{{ gen }}
+                                        </option>
+                                    </select>
+                                    <div
+                                        class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
+                                        <svg class="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg"
+                                            viewBox="0 0 20 20">
+                                            <path
+                                                d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" />
+                                        </svg>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div>
+                                <label class="text-xs text-gray-500 block mb-1">成員</label>
+                                <div class="relative">
+                                    <select v-model="newItem.member" :disabled="!selectedGen"
+                                        class="w-full bg-gray-50 border border-gray-200 rounded-lg p-2 text-sm appearance-none focus:outline-none focus:border-sakura disabled:bg-gray-100 disabled:text-gray-400">
+                                        <option disabled value="">
+                                            {{ selectedGen ? '選擇成員' : '請先選期別' }}
+                                        </option>
+                                        <option v-for="m in currentMemberOptions" :value="m">{{ m }}</option>
+                                    </select>
+                                    <div
+                                        class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
+                                        <svg class="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg"
+                                            viewBox="0 0 20 20">
+                                            <path
+                                                d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" />
+                                        </svg>
+                                    </div>
                                 </div>
                             </div>
                         </div>
                         <div>
                             <label class="text-xs text-gray-500 block mb-1">套組名稱</label>
-                            <input v-model="newItem.set_name" type="text" placeholder="ex: 2025振袖" class="w-full bg-gray-50 border border-gray-200 rounded-lg p-2 text-sm focus:outline-none focus:border-sakura">
+                            <input v-model="newItem.set_name" type="text" placeholder="ex: 2025振袖"
+                                class="w-full bg-gray-50 border border-gray-200 rounded-lg p-2 text-sm focus:outline-none focus:border-sakura">
                         </div>
                     </div>
                     <div>
                         <label class="text-xs text-gray-500 block mb-1">構成 (以逗號分隔)</label>
-                        <input v-model="newItem.poses_input" type="text" class="w-full bg-gray-50 border border-gray-200 rounded-lg p-2 text-sm focus:outline-none focus:border-sakura">
+                        <input v-model="newItem.poses_input" type="text"
+                            class="w-full bg-gray-50 border border-gray-200 rounded-lg p-2 text-sm focus:outline-none focus:border-sakura">
                     </div>
-                    
-                    <button @click="addNewItem" :disabled="submitting" class="w-full bg-darkgray hover:bg-black text-white py-2 rounded-lg text-sm font-bold transition-colors disabled:opacity-50">
+
+                    <button @click="addNewItem" :disabled="submitting"
+                        class="w-full bg-darkgray hover:bg-black text-white py-2 rounded-lg text-sm font-bold transition-colors disabled:opacity-50">
                         {{ submitting ? '處理中...' : '＋ 新增生寫真' }}
                     </button>
                 </div>
@@ -102,29 +137,40 @@
                     沒有符合的資料
                 </div>
 
-                <div v-for="item in filteredItems" :key="item.id" class="bg-white rounded-xl shadow-sm border border-gray-100 p-4 relative overflow-hidden transition-all duration-300">
-                    
+                <div v-for="item in filteredItems" :key="item.id"
+                    class="bg-white rounded-xl shadow-sm border border-gray-100 p-4 relative overflow-hidden transition-all duration-300">
+
                     <div class="flex justify-between items-start mb-3">
                         <div>
                             <div class="text-xs text-sakura font-bold mb-0.5">{{ item.member }}</div>
                             <div class="text-lg font-bold text-gray-800 leading-tight">{{ item.set_name }}</div>
                         </div>
-                        <div v-if="isComp(item.poses_json)" class="bg-yellow-400 text-yellow-900 text-xs font-black px-2 py-1 rounded shadow-sm transform rotate-3 flex items-center">
-                            <span>👑 COMP</span>
+
+                        <div class="flex items-center space-x-2">
+                            <div v-if="isComp(item.poses_json)"
+                                class="bg-yellow-400 text-yellow-900 text-xs font-black px-2 py-1 rounded shadow-sm transform rotate-3 flex items-center">
+                                <span>👑 COMP</span>
+                            </div>
+
+                            <button @click="deleteItem(item)" class="text-gray-300 hover:text-red-400 p-1">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24"
+                                    stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                </svg>
+                            </button>
                         </div>
                     </div>
 
                     <hr class="border-gray-100 mb-3">
 
                     <div class="grid grid-cols-4 gap-2">
-                        <button 
-                            v-for="(pose, idx) in item.poses_json" 
-                            :key="idx"
-                            @click="cyclePoseState(item, idx)"
+                        <button v-for="(pose, idx) in item.poses_json" :key="idx" @click="cyclePoseState(item, idx)"
                             class="flex flex-col items-center justify-center py-2 rounded-lg transition-colors duration-200 border"
                             :class="getButtonClass(pose.s)">
-                            
-                            <span class="text-xs font-bold">{{ pose.n }}</span> <span class="text-[10px] opacity-80">{{ getStatusLabel(pose.s) }}</span> </button>
+
+                            <span class="text-xs font-bold">{{ pose.n }}</span> <span class="text-[10px] opacity-80">{{
+                                getStatusLabel(pose.s) }}</span> </button>
                     </div>
 
                     <div v-if="item._saving" class="absolute bottom-1 right-2 text-[10px] text-gray-300">
@@ -147,12 +193,36 @@
                 const loading = ref(false);
                 const submitting = ref(false);
                 const currentFilter = ref('Total');
-                
-                // 預設成員名單
-                const presetMembers = [
-                   '田村保乃', '森田ひかる', '山﨑天', '藤吉夏鈴', '守屋麗奈', 
-                   '大園玲', '山下瞳月', '谷口愛季', '村井優', '中嶋優月'
-                ];
+
+                const selectedGen = ref(''); // 儲存目前選擇的期別 (二期/三期/四期)
+
+                // 定義完整的成員資料結構
+                const memberData = {
+                    '二期生': [
+                        '井上 梨名', '遠藤 光莉', '大園 玲', '大沼 晶保', '幸阪 茉里乃',
+                        '武元 唯衣', '田村 保乃', '藤吉 夏鈴', '増本 綺良', '松田 里奈',
+                        '森田 ひかる', '守屋 麗奈', '山﨑 天'
+                    ],
+                    '三期生': [
+                        '石森 璃花', '遠藤 理子', '小田倉 麗奈', '小島 凪紗', '谷口 愛季',
+                        '中嶋 優月', '的野 美青', '向井 純葉', '村井 優', '村山 美羽', '山下 瞳月'
+                    ],
+                    '四期生': [
+                        '浅井 恋乃未', '稲熊 ひな', '勝又 春', '佐藤 愛桜', '中川 智尋',
+                        '松本 和子', '目黒 陽色', '山川 宇衣', '山田 桃実'
+                    ]
+                };
+
+                // 計算屬性：根據選到的期別，回傳該期的成員名單
+                const currentMemberOptions = computed(() => {
+                    if (!selectedGen.value) return [];
+                    return memberData[selectedGen.value];
+                });
+
+                // 當期別改變時，重置已選的成員 (避免選了二期卻還留著三期成員的名字)
+                const handleGenChange = () => {
+                    newItem.value.member = '';
+                };
 
                 // 新增表單資料
                 const newItem = ref({
@@ -170,7 +240,7 @@
                     try {
                         const res = await fetch(API_URL);
                         const json = await res.json();
-                        if(json.status === 'success'){
+                        if (json.status === 'success') {
                             items.value = json.data;
                         }
                     } catch (e) {
@@ -193,15 +263,15 @@
 
                 // 3. Add Item
                 const addNewItem = async () => {
-                    if(!newItem.value.member || !newItem.value.set_name) return alert('請填寫完整資訊');
-                    
+                    if (!newItem.value.member || !newItem.value.set_name) return alert('請填寫完整資訊');
+
                     submitting.value = true;
-                    
+
                     // 解析姿勢字串為 JSON 結構: [{n: 'ヨリ', s: 0}, ...]
                     // s (status): 0=None, 1=Owned, 2=Trade, 3=Spare
                     const posesArray = newItem.value.poses_input.split(/[,，]/).map(p => ({
                         n: p.trim(),
-                        s: 0 
+                        s: 0
                     })).filter(p => p.n);
 
                     const payload = {
@@ -224,7 +294,7 @@
                         });
                         // Reset Form
                         newItem.value.set_name = '';
-                    } catch(e) {
+                    } catch (e) {
                         alert('新增失敗，請重整頁面');
                     } finally {
                         submitting.value = false;
@@ -243,7 +313,7 @@
 
                 const saveItemDebounced = (item) => {
                     item._saving = true; // UI Hint
-                    
+
                     // Clear existing timer for this item
                     if (debounceTimers[item.id]) clearTimeout(debounceTimers[item.id]);
 
@@ -256,7 +326,7 @@
                                 headers: { 'Content-Type': 'application/json' },
                                 body: JSON.stringify({ action: 'upsert', data: item })
                             });
-                        } catch(e) {
+                        } catch (e) {
                             console.error('Auto save failed', e);
                         } finally {
                             item._saving = false;
@@ -264,10 +334,37 @@
                         }
                     }, 1500);
                 };
+                // 刪除功能
+                const deleteItem = async (item) => {
+                    // 1. 防呆確認
+                    if (!confirm(`確定要刪除「${item.member} ${item.set_name}」嗎？\n刪除後無法復原喔！`)) return;
+
+                    // 2. 樂觀更新 UI (先從畫面移除，感覺比較快)
+                    // 使用 filter 把這個 ID 過濾掉
+                    items.value = items.value.filter(i => i.id !== item.id);
+
+                    // 3. 呼叫後端 API
+                    try {
+                        await fetch(API_URL, {
+                            method: 'POST',
+                            mode: 'no-cors',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                action: 'delete',
+                                data: { id: item.id }
+                            })
+                        });
+                        console.log('刪除指令已發送');
+                    } catch (e) {
+                        alert('刪除失敗，請檢查網路');
+                        // 如果失敗，理論上要重新讀取資料把卡片加回來，這裡從簡
+                        fetchData();
+                    }
+                };
 
                 // Helpers
                 const getButtonClass = (status) => {
-                    switch(status) {
+                    switch (status) {
                         case 1: return 'bg-sakura text-white border-sakura shadow-md'; // 收藏中
                         case 2: return 'bg-yellow-400 text-yellow-900 border-yellow-400'; // 交換中
                         case 3: return 'bg-blue-400 text-white border-blue-400'; // 複數
@@ -276,7 +373,7 @@
                 };
 
                 const getStatusLabel = (status) => {
-                    switch(status) {
+                    switch (status) {
                         case 1: return 'GET';
                         case 2: return 'TRADE';
                         case 3: return 'SPARE';
@@ -297,10 +394,12 @@
                 return {
                     items, loading, submitting, presetMembers, newItem, currentFilter,
                     uniqueMembers, filteredItems,
-                    addNewItem, cyclePoseState, getButtonClass, getStatusLabel, isComp
+                    addNewItem, cyclePoseState, getButtonClass, getStatusLabel, isComp, deleteItem,
+                    memberData, selectedGen, currentMemberOptions, handleGenChange
                 };
             }
         }).mount('#app');
     </script>
 </body>
+
 </html>
