@@ -77,7 +77,7 @@
                                 <div class="relative">
                                     <select v-model="selectedGen" @change="handleGenChange"
                                         class="w-full bg-gray-50 border border-gray-200 rounded-lg p-2 text-sm appearance-none focus:outline-none focus:border-sakura">
-                                        <option disabled value="">選擇期別</option>
+                                        <option disabled value="">期別</option>
                                         <option v-for="(list, gen) in memberData" :key="gen" :value="gen">{{ gen }}
                                         </option>
                                     </select>
@@ -98,7 +98,7 @@
                                     <select v-model="newItem.member" :disabled="!selectedGen"
                                         class="w-full bg-gray-50 border border-gray-200 rounded-lg p-2 text-sm appearance-none focus:outline-none focus:border-sakura disabled:bg-gray-100 disabled:text-gray-400">
                                         <option disabled value="">
-                                            {{ selectedGen ? '選擇成員' : '選擇成員' }}
+                                            {{ selectedGen ? '成員' : '成員' }}
                                         </option>
                                         <option v-for="m in currentMemberOptions" :value="m">{{ m }}</option>
                                     </select>
@@ -404,3 +404,4 @@
 
 
 </html>
+
