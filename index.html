@@ -45,14 +45,25 @@
 <body class="bg-gray-50 text-darkgray font-sans pb-20">
 
     <div id="app" v-cloak>
-        <header class="sticky top-0 z-50 bg-white/90 backdrop-blur-md shadow-sm border-b border-pink-100">
-            <div class="px-4 py-3 flex space-x-2 overflow-x-auto hide-scrollbar items-center">
+        <header class="sticky top-0 z-50 bg-white/95 backdrop-blur-md shadow-sm border-b border-pink-100 pb-2">
+
+            <div class="px-4 pt-3 pb-2">
+                <div class="relative">
+                    <input v-model="searchQuery" type="text" placeholder="🔍 搜尋套組名稱 (ex: 振袖)"
+                        class="w-full bg-gray-100 text-gray-700 text-sm rounded-lg pl-3 pr-3 py-2 focus:outline-none focus:ring-2 focus:ring-sakura transition-all">
+                    <button v-if="searchQuery" @click="searchQuery = ''"
+                        class="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 text-xs bg-gray-200 rounded-full w-5 h-5 flex items-center justify-center">
+                        ✕
+                    </button>
+                </div>
+            </div>
+
+            <div class="px-4 pb-2 flex space-x-2 overflow-x-auto hide-scrollbar items-center">
                 <button @click="currentFilter = 'Total'"
                     :class="currentFilter === 'Total' ? 'bg-sakura text-white shadow-md' : 'bg-gray-100 text-gray-500'"
                     class="whitespace-nowrap px-4 py-1.5 rounded-full text-sm font-bold transition-all flex-shrink-0">
                     Total
                 </button>
-
                 <button v-for="member in uniqueMembers" :key="member" @click="currentFilter = member"
                     :class="currentFilter === member ? 'bg-sakura text-white shadow-md' : 'bg-gray-100 text-gray-500'"
                     class="whitespace-nowrap px-4 py-1.5 rounded-full text-sm font-medium transition-all flex-shrink-0">
@@ -67,68 +78,56 @@
                 <p class="animate-pulse font-bold">讀取資料中...</p>
             </div>
 
-            <div class="bg-white rounded-xl shadow-sm p-4 mb-6 border border-gray-100">
-                <h2 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">New Entry</h2>
-                <div class="space-y-3">
-                    <div class="grid grid-cols-2 gap-2">
-                        <div class="grid grid-cols-2 gap-2">
-                            <div>
-                                <label class="text-xs text-gray-500 block mb-1">期別</label>
-                                <div class="relative">
-                                    <select v-model="selectedGen" @change="handleGenChange"
-                                        class="w-full bg-gray-50 border border-gray-200 rounded-lg p-2 text-sm appearance-none focus:outline-none focus:border-sakura">
-                                        <option disabled value="">期別</option>
-                                        <option v-for="(list, gen) in memberData" :key="gen" :value="gen">{{ gen }}
-                                        </option>
-                                    </select>
-                                    <div
-                                        class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
-                                        <svg class="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg"
-                                            viewBox="0 0 20 20">
-                                            <path
-                                                d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" />
-                                        </svg>
-                                    </div>
-                                </div>
-                            </div>
+            <div class="bg-white rounded-xl shadow-sm mb-6 border border-gray-100 overflow-hidden transition-all">
 
-                            <div>
+                <div @click="showInputForm = !showInputForm"
+                    class="p-4 flex justify-between items-center cursor-pointer bg-gray-50 hover:bg-gray-100 transition-colors select-none">
+
+                    <div class="flex items-center space-x-2">
+                        <span class="text-xs font-bold text-gray-400 uppercase tracking-wider">New Entry</span>
+                        <span v-if="showInputForm" class="w-2 h-2 rounded-full bg-green-400"></span>
+                    </div>
+
+                    <div class="text-gray-400 transition-transform duration-300"
+                        :class="showInputForm ? 'rotate-45' : ''">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24"
+                            stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                        </svg>
+                    </div>
+                </div>
+
+                <div v-show="showInputForm" class="px-4 pb-4 bg-white border-t border-gray-100">
+                    <div class="space-y-3 pt-3">
+                        <div class="grid grid-cols-3 gap-2">
+                            <div class="col-span-1">
                                 <label class="text-xs text-gray-500 block mb-1">成員</label>
                                 <div class="relative">
-                                    <select v-model="newItem.member" :disabled="!selectedGen"
-                                        class="w-full bg-gray-50 border border-gray-200 rounded-lg p-2 text-sm appearance-none focus:outline-none focus:border-sakura disabled:bg-gray-100 disabled:text-gray-400">
-                                        <option disabled value="">
-                                            {{ selectedGen ? '成員' : '成員' }}
-                                        </option>
-                                        <option v-for="m in currentMemberOptions" :value="m">{{ m }}</option>
+                                    <select v-model="newItem.member"
+                                        class="w-full bg-gray-50 border border-gray-200 rounded-lg p-2 text-sm appearance-none focus:outline-none focus:border-sakura">
+                                        <option disabled value="">選擇</option>
+                                        <option v-for="m in allMembers" :value="m">{{ m }}</option>
                                     </select>
-                                    <div
-                                        class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
-                                        <svg class="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg"
-                                            viewBox="0 0 20 20">
-                                            <path
-                                                d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" />
-                                        </svg>
-                                    </div>
                                 </div>
                             </div>
+                            <div class="col-span-2">
+                                <label class="text-xs text-gray-500 block mb-1">套組名稱</label>
+                                <input v-model="newItem.set_name" type="text" placeholder="ex: 2025振袖"
+                                    class="w-full bg-gray-50 border border-gray-200 rounded-lg p-2 text-sm focus:outline-none focus:border-sakura">
+                            </div>
                         </div>
+
                         <div>
-                            <label class="text-xs text-gray-500 block mb-1">套組名稱</label>
-                            <input v-model="newItem.set_name" type="text" placeholder="ex: 2025振袖"
+                            <label class="text-xs text-gray-500 block mb-1">構成 (以逗號分隔)</label>
+                            <input v-model="newItem.poses_input" type="text"
                                 class="w-full bg-gray-50 border border-gray-200 rounded-lg p-2 text-sm focus:outline-none focus:border-sakura">
                         </div>
-                    </div>
-                    <div>
-                        <label class="text-xs text-gray-500 block mb-1">構成 (以逗號分隔)</label>
-                        <input v-model="newItem.poses_input" type="text"
-                            class="w-full bg-gray-50 border border-gray-200 rounded-lg p-2 text-sm focus:outline-none focus:border-sakura">
-                    </div>
 
-                    <button @click="addNewItem" :disabled="submitting"
-                        class="w-full bg-darkgray hover:bg-black text-white py-2 rounded-lg text-sm font-bold transition-colors disabled:opacity-50">
-                        {{ submitting ? '處理中...' : '＋ 新增生寫真' }}
-                    </button>
+                        <button @click="addNewItem" :disabled="submitting"
+                            class="w-full bg-darkgray hover:bg-black text-white py-2 rounded-lg text-sm font-bold transition-colors disabled:opacity-50">
+                            {{ submitting ? '處理中...' : '＋ 新增生寫真' }}
+                        </button>
+                    </div>
                 </div>
             </div>
 
@@ -188,220 +187,166 @@
         const { createApp, ref, computed, onMounted } = Vue;
 
         createApp({
-            setup() {
+            ssetup() {
                 const items = ref([]);
                 const loading = ref(false);
                 const submitting = ref(false);
+
+                // 1. 定義成員名單 (直接列出所有成員，不分層)
+                const allMembers = [
+                    '櫻坂46',
+                    '井上 梨名', '遠藤 光莉', '大園 玲', '大沼 晶保', '幸阪 茉里乃',
+                    '武元 唯衣', '田村 保乃', '藤吉 夏鈴', '増本 綺良', '松田 里奈',
+                    '森田 ひかる', '守屋 麗奈', '山﨑 天',
+                    '石森 璃花', '遠藤 理子', '小田倉 麗奈', '小島 凪紗', '谷口 愛季',
+                    '中嶋 優月', '的野 美青', '向井 純葉', '村井 優', '村山 美羽', '山下 瞳月',
+                    '浅井 恋乃未', '稲熊 ひな', '勝又 春', '佐藤 愛桜', '中川 智尋',
+                    '松本 和子', '目黒 陽色', '山川 宇衣', '山田 桃実'
+                ];
+
+                // 2. 新增的狀態變數
                 const currentFilter = ref('Total');
+                const searchQuery = ref('');        // 搜尋用
+                const showInputForm = ref(false);   // 收折選單用
 
-                const selectedGen = ref(''); // 儲存目前選擇的期別 (二期/三期/四期)
-
-                // 定義完整的成員資料結構
-                const memberData = {
-                    '二期生': [
-                        '井上 梨名', '遠藤 光莉', '大園 玲', '大沼 晶保', '幸阪 茉里乃',
-                        '武元 唯衣', '田村 保乃', '藤吉 夏鈴', '増本 綺良', '松田 里奈',
-                        '森田 ひかる', '守屋 麗奈', '山﨑 天'
-                    ],
-                    '三期生': [
-                        '石森 璃花', '遠藤 理子', '小田倉 麗奈', '小島 凪紗', '谷口 愛季',
-                        '中嶋 優月', '的野 美青', '向井 純葉', '村井 優', '村山 美羽', '山下 瞳月'
-                    ],
-                    '四期生': [
-                        '浅井 恋乃未', '稲熊 ひな', '勝又 春', '佐藤 愛桜', '中川 智尋',
-                        '松本 和子', '目黒 陽色', '山川 宇衣', '山田 桃実'
-                    ]
-                };
-
-                // 計算屬性：根據選到的期別，回傳該期的成員名單
-                const currentMemberOptions = computed(() => {
-                    if (!selectedGen.value) return [];
-                    return memberData[selectedGen.value];
-                });
-
-                // 當期別改變時，重置已選的成員 (避免選了二期卻還留著三期成員的名字)
-                const handleGenChange = () => {
-                    newItem.value.member = '';
-                };
-
-                // 新增表單資料
                 const newItem = ref({
                     member: '',
                     set_name: '',
                     poses_input: 'ヨリ, チュウ, ヒキ, 座り'
                 });
 
-                // Debounce timer map
                 const debounceTimers = {};
 
-                // 1. Fetch Data
+                // Fetch Data (含 LocalStorage 快取優化)
                 const fetchData = async () => {
-                    loading.value = true;
+                    const cachedData = localStorage.getItem('sakura_tracker_data');
+                    if (cachedData) {
+                        try { items.value = JSON.parse(cachedData); } catch (e) { }
+                    }
+                    if (items.value.length === 0) loading.value = true;
+
                     try {
                         const res = await fetch(API_URL);
                         const json = await res.json();
                         if (json.status === 'success') {
                             items.value = json.data;
+                            localStorage.setItem('sakura_tracker_data', JSON.stringify(json.data));
                         }
                     } catch (e) {
-                        alert('讀取失敗: ' + e);
+                        console.error(e);
                     } finally {
                         loading.value = false;
                     }
                 };
 
-                // 2. Computed: Filter Logic
+                // 3. 篩選邏輯 (加入 Search Query)
                 const uniqueMembers = computed(() => {
                     const members = items.value.map(i => i.member);
                     return [...new Set(members)].sort();
                 });
 
                 const filteredItems = computed(() => {
-                    if (currentFilter.value === 'Total') return items.value;
-                    return items.value.filter(i => i.member === currentFilter.value);
+                    let result = items.value;
+                    // 先過濾成員
+                    if (currentFilter.value !== 'Total') {
+                        result = result.filter(i => i.member === currentFilter.value);
+                    }
+                    // 再過濾搜尋關鍵字
+                    if (searchQuery.value) {
+                        const q = searchQuery.value.toLowerCase();
+                        result = result.filter(i => i.set_name.toLowerCase().includes(q));
+                    }
+                    return result;
                 });
 
-                // 3. Add Item
+                // 新增項目
                 const addNewItem = async () => {
                     if (!newItem.value.member || !newItem.value.set_name) return alert('請填寫完整資訊');
-
                     submitting.value = true;
 
-                    // 解析姿勢字串為 JSON 結構: [{n: 'ヨリ', s: 0}, ...]
-                    // s (status): 0=None, 1=Owned, 2=Trade, 3=Spare
-                    const posesArray = newItem.value.poses_input.split(/[,，]/).map(p => ({
-                        n: p.trim(),
-                        s: 0
-                    })).filter(p => p.n);
-
+                    const posesArray = newItem.value.poses_input.split(/[,，]/).map(p => ({ n: p.trim(), s: 0 })).filter(p => p.n);
                     const payload = {
-                        id: Date.now(), // Timestamp ID
+                        id: Date.now(),
                         member: newItem.value.member,
                         set_name: newItem.value.set_name,
                         poses_json: posesArray
                     };
 
-                    // Optimistic UI Update (先加到畫面)
                     items.value.unshift(payload);
+                    showInputForm.value = false;  // 新增後自動收起
 
-                    // Call API
-                    try {
-                        await fetch(API_URL, {
-                            method: 'POST',
-                            mode: 'no-cors', // 重要：GAS post 常用 hack
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ action: 'upsert', data: payload })
-                        });
-                        // Reset Form
-                        newItem.value.set_name = '';
-                    } catch (e) {
-                        alert('新增失敗，請重整頁面');
-                    } finally {
-                        submitting.value = false;
-                    }
-                };
-
-                // 4. Interaction: Cycle Status
-                const cyclePoseState = (item, poseIndex) => {
-                    // 狀態循環: 0 -> 1 -> 2 -> 3 -> 0
-                    let currentStatus = item.poses_json[poseIndex].s;
-                    item.poses_json[poseIndex].s = (currentStatus + 1) % 4;
-
-                    // Trigger Debounced Save
-                    saveItemDebounced(item);
-                };
-
-                const saveItemDebounced = (item) => {
-                    item._saving = true; // UI Hint
-
-                    // Clear existing timer for this item
-                    if (debounceTimers[item.id]) clearTimeout(debounceTimers[item.id]);
-
-                    // Set new timer (1.5秒後儲存)
-                    debounceTimers[item.id] = setTimeout(async () => {
-                        try {
-                            await fetch(API_URL, {
-                                method: 'POST',
-                                mode: 'no-cors',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({ action: 'upsert', data: item })
-                            });
-                        } catch (e) {
-                            console.error('Auto save failed', e);
-                        } finally {
-                            item._saving = false;
-                            delete debounceTimers[item.id];
-                        }
-                    }, 1500);
-                };
-                // 刪除功能
-                const deleteItem = async (item) => {
-                    // 1. 防呆確認
-                    if (!confirm(`確定要刪除「${item.member} ${item.set_name}」嗎？\n刪除後無法復原喔！`)) return;
-
-                    // 2. 樂觀更新 UI (先從畫面移除，感覺比較快)
-                    // 使用 filter 把這個 ID 過濾掉
-                    items.value = items.value.filter(i => i.id !== item.id);
-
-                    // 3. 呼叫後端 API
                     try {
                         await fetch(API_URL, {
                             method: 'POST',
                             mode: 'no-cors',
                             headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({
-                                action: 'delete',
-                                data: { id: item.id }
-                            })
+                            body: JSON.stringify({ action: 'upsert', data: payload })
                         });
-                        console.log('刪除指令已發送');
+                        newItem.value.set_name = '';
                     } catch (e) {
-                        alert('刪除失敗，請檢查網路');
-                        // 如果失敗，理論上要重新讀取資料把卡片加回來，這裡從簡
-                        fetchData();
+                        alert('新增失敗');
+                    } finally {
+                        submitting.value = false;
                     }
                 };
 
-                // Helpers
+                // 刪除項目
+                const deleteItem = async (item) => {
+                    if (!confirm(`確定要刪除「${item.member} ${item.set_name}」嗎？`)) return;
+                    items.value = items.value.filter(i => i.id !== item.id);
+                    try {
+                        await fetch(API_URL, {
+                            method: 'POST',
+                            mode: 'no-cors',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ action: 'delete', data: { id: item.id } })
+                        });
+                    } catch (e) { }
+                };
+
+                // Helper Functions (保持不變)
+                const cyclePoseState = (item, poseIndex) => {
+                    let currentStatus = item.poses_json[poseIndex].s;
+                    item.poses_json[poseIndex].s = (currentStatus + 1) % 4;
+                    saveItemDebounced(item);
+                };
+
+                const saveItemDebounced = (item) => {
+                    item._saving = true;
+                    if (debounceTimers[item.id]) clearTimeout(debounceTimers[item.id]);
+                    debounceTimers[item.id] = setTimeout(async () => {
+                        try {
+                            await fetch(API_URL, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'upsert', data: item }) });
+                        } finally { item._saving = false; delete debounceTimers[item.id]; }
+                    }, 1500);
+                };
+
                 const getButtonClass = (status) => {
                     switch (status) {
-                        case 1: return 'bg-sakura text-white border-sakura shadow-md'; // 收藏中
-                        case 2: return 'bg-yellow-400 text-yellow-900 border-yellow-400'; // 交換中
-                        case 3: return 'bg-blue-400 text-white border-blue-400'; // 複數
-                        default: return 'bg-gray-50 text-gray-400 border-gray-200'; // 無
+                        case 1: return 'bg-sakura text-white border-sakura shadow-md';
+                        case 2: return 'bg-yellow-400 text-yellow-900 border-yellow-400';
+                        case 3: return 'bg-blue-400 text-white border-blue-400';
+                        default: return 'bg-gray-50 text-gray-400 border-gray-200';
                     }
                 };
 
-                const getStatusLabel = (status) => {
-                    switch (status) {
-                        case 1: return 'GET';
-                        case 2: return 'TRADE';
-                        case 3: return 'SPARE';
-                        default: return 'NONE';
-                    }
-                };
+                const getStatusLabel = (s) => ['NONE', 'GET', 'TRADE', 'SPARE'][s];
+                const isComp = (poses) => poses && poses.length > 0 && poses.every(p => p.s === 1);
 
-                const isComp = (poses) => {
-                    if (!poses || poses.length === 0) return false;
-                    // 檢查是否每一個 pose 的 status 都是 1
-                    return poses.every(p => p.s === 1);
-                };
+                onMounted(() => { fetchData(); });
 
-                onMounted(() => {
-                    fetchData();
-                });
-
+                // 回傳變數給 HTML 使用
                 return {
-                    items, loading, submitting, newItem, currentFilter,
+                    items, loading, submitting, allMembers, newItem, currentFilter,
                     uniqueMembers, filteredItems,
                     addNewItem, cyclePoseState, getButtonClass, getStatusLabel, isComp, deleteItem,
-                    memberData, selectedGen, currentMemberOptions, handleGenChange
+                    // 新功能變數記得回傳
+                    searchQuery, showInputForm
                 };
             }
+        }
         }).mount('#app');
     </script>
 </body>
 
-
 </html>
-
